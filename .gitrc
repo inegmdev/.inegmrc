@@ -1,0 +1,241 @@
+# Everyday Git Commands
+# ---------------------
+# git-l will list the log of all branches in a gui format
+alias git-l="git log --oneline --graph --all --decorate"
+# git-reset: will reset all the not staged tracked files
+alias git-reset="git reset --hard HEAD && git submodule foreach --recursive git reset --hard HEAD"
+# git-clean: will clean the untracked files
+alias git-clean="git clean -xfd && git submodule foreach --recursive git clean -xfd"
+# git-tag-update : updates the outdated tags (useful when tags are moved)
+alias git-tag-update="git submodule foreach --recursive bash -c 'git tag -l | xargs git tag -d' && git submodule foreach --recursive git fetch --tags"
+# git-update : will sync the urls of the submodules (also will check for new submodules), and will update (pull) the workspace files
+alias git-update="git submodule sync --recursive && git submodule update --recursive --init"
+# for each iterator for the submodules
+alias git-for='git submodule foreach --recursive'
+# git-fetch : fetches all tags and all new changes from remote 
+alias git-fetch='git fetch --all --prune --tags; git-for bash -c "git fetch --all --prune --tags"'
+# git-fetch-force-next-master: This will sync the next 
+alias git-fetch-force-next-master='git-for bash -c "git checkout --detach; git branch -D master && git fetch origin master:master -f; git branch -D next && git fetch origin next:next -f || echo NO NEXT; echo; echo"'
+
+# Fast Git Aliases
+# ----------------
+alias gls='git log --oneline --graph --decorate'
+alias glsa='git log --oneline --graph --decorate --all'
+alias gst='git status'
+alias ga='git add'
+alias gc='git commit'
+alias gchk='git checkout'
+alias gb='git branch'
+alias gdiff="git diff"
+
+# Git Diff Aliases
+# ----------------
+alias gitdiff-all='echo "# Staged:"; git diff --name-only --cached; echo "# Unstaged:"; git diff --name-only; echo "# Untracked:"; git ls-files -o; echo;echo ; git submodule foreach --recursive bash -c "echo \"# Staged:\"; git diff --name-only --cached; echo \"# Unstaged:\"; git diff --name-only; echo \"# Untracked:\"; git ls-files -o; echo;echo"'
+alias gitdiff-unstaged='echo "# Unstaged:"; git diff --name-only; echo;echo ; git submodule foreach --recursive bash -c "echo \"# Unstaged:\"; git diff --name-only; echo;echo"'
+alias gitdiff-staged='echo "# Staged:"; git diff --name-only --cached; echo;echo ; git submodule foreach --recursive bash -c "echo \"# Staged:\"; git diff --name-only --cached; echo;echo"'
+alias gitdiff-untracked='echo "# Untracked:"; git ls-files -o; echo;echo ; git submodule foreach --recursive bash -c "echo \"# Untracked:\"; git ls-files -o; echo;echo"'
+
+# Git External Diff Commands
+# --------------------------
+# @note Make sure that you've this setup in your local user configuration to be applicable
+alias gitdiff-rhapsody='yes | git difftool -t rhapsody'
+
+
+# Git Sync commands
+# -----------------
+alias git-next="git fetch --all --tags --prune;  git checkout --detach; git fetch origin next:next -f && git checkout next || echo NONEXT;  echo;echo; git-for bash -c 'git fetch --all --tags --prune;  git checkout --detach; git fetch origin next:next -f && git checkout next || echo NONEXT;  echo;echo;'"
+alias git-topic="make --directory=~/_scripts/topic-checkout topic-checkout"
+alias git-fetch="git fetch --all --prune --tags; git-for git fetch --all --prune --tags"
+
+# Git Integration
+# ---------------
+function print_separator() 
+{
+    echo 
+    echo "------------------------------------------------------------------------"
+    echo
+}
+function git_sync()
+{
+  # User inputs the 1st branch 
+  source_branch=$1
+  # User inputs the 2nd branch 
+  target_branch=$2
+  # User inputs the arifact id for the integration
+  artf=$3
+  echo "Your integration Artifcat is (${artf})"
+  echo "You're going to sync (${source_branch}) --> (${target_branch})"
+
+  print_separator
+  # Print the latest next commit message  
+  sync_next_to_master_msg="Sync \`next\` into \`master\`"
+  echo "[git-next2master]: latest next message is :"
+  echo ${sync_next_to_master_msg}
+
+  print_separator
+  echo "[git-next2master]: Checking out \`master\`"
+  git checkout master
+  if [[ $? != 0 ]]; then return $? ; fi 
+
+  # Merging next -> master 
+  print_separator
+  echo "[git-next2master]: Merging \`next\` --> \`master\`:"
+  git merge --no-ff next -m "${sync_next_to_master_msg}
+
+[${artf}]" 
+  if [[ $? != 0 ]]; then return $? ; fi 
+  
+  # Print master commit message 
+  print_separator
+  echo "[git-next2master]: Now the \`master\` commit message is:"
+  git log -n 1
+  
+  # FF next
+  print_separator
+  echo "[git-next2master]: Fast forward \`next\` to \`master\`:"
+  git checkout next 
+  if [[ $? != 0 ]]; then return $? ; fi 
+  git merge --ff master 
+  if [[ $? != 0 ]]; then return $? ; fi 
+  
+
+  # Pushing master (user input) 
+  print_separator
+  read -p "[git-next2master]: Do you want to push \`next\` and \`master\` to origin? (y/n): " user_answer
+  if [[ "${user_answer}" == "y" ]]; then 
+    git push origin master 
+    if [[ $? != 0 ]]; then return $? ; fi 
+    git push origin next 
+    if [[ $? != 0 ]]; then return $? ; fi 
+  else
+    return
+  fi
+  
+  # Success message 
+  print_separator
+  echo "[git-next2master]: ✔ Success "
+}
+export -f git_sync 
+alias git-next2master="git_sync next master"
+
+function git_checkout {
+  local all_args=$@
+	local RED='\033[0;31m'
+	local GREEN='\033[0;32m'
+	local NC='\033[0m'
+	
+	git submodule foreach --recursive bash -c "git checkout ${all_args} && echo -e '${GREEN}Successfull checkout.${NC}' || echo -e '${RED}Reference does not exist${NC}'; echo"
+}
+export -f git_checkout
+alias git-checkout="git_checkout"
+
+
+alias git-tag="~/_scripts/submodule-tag/main.sh"
+alias git-branch="~/_scripts/submodule-branch/main.sh"
+alias next="git checkout --detach && git fetch origin next:next -f && git checkout next && git-clean && git-reset && git-update "
+
+
+#
+# Simulate Clone
+# @brief Simulates the cloning of a fresh copy from the origin
+# @param repo_path [in] Relative or abs path for the repo
+# @param branch    [in] Branch to be cloned
+# 
+function sim-clone () {
+	local repo_path=$(realpath $1)
+	local branch=$2
+
+	# Echo some information
+	echo "Clone (${branch}) in Repo (${repo_path})"
+
+	# Remove all things except `.git` folder
+	ls | xargs rm -rfv
+
+	# Update `.git` dir
+	git fetch --all --tags --prune
+
+	# Run garbage collection
+	git gc --aggressive
+
+	# Git reset the repo 
+	git reset --hard HEAD
+
+	# Git fetch the latest branch
+	git fetch origin ${branch}:${branch} -f
+
+	# Git checkout 
+	git checkout next
+	
+	# Git clean
+	git reset --hard HEAD && git submodule foreach --recursive bash -c "git reset --hard HEAD"
+
+	# Git reset
+	git clean -xfd && git submodule foreach --recursive bash -c "git clean -xfd"
+
+	# Git update submodules
+	git submodule sync --recursive && git submodule update --init --recursive
+}
+export -f sim-clone
+
+function u_color () {
+	local color=$1
+	case ${color} in
+		"red")
+			echo "\u001b[48;5;1m"
+		;;
+		"green")
+			echo "\u001b[48;5;2m"
+		;;
+
+		"yellow")
+			echo "\u001b[48;5;3m"
+		;;
+		
+		"blue")
+			echo "\u001b[48;5;4m"
+		;;
+		
+		"magenta")
+			echo "\u001b[48;5;5m"
+		;;
+		
+		"cyan")
+			echo "\u001b[48;5;6m"
+		;;
+		
+		"no")
+		echo "\u001b[0m"
+		;;
+		
+		*)
+		echo ""
+		;;
+	esac
+}
+
+function step_head () {
+	# Colors
+	local cyan=$( u_color "cyan" )
+	local no_color=$( u_color "no" )
+	
+	# Message format
+	local msg=$1
+	local msg_formatted=$(  printf "++++ %-40s ++++\n" ${msg} )
+	
+	# Print the message
+	printf "${cyan}${msg_formatted}${no_color}" 
+}
+
+function step_foorter () {
+	local msg=$1
+	printf "%-s40" ${msg}
+}
+
+# Depricated 
+# ----------
+#alias git-integrator-log-after-next='date=$(git log --date=short next -1 | grep "Date" | sed -E "s/Date:\s+//") ; git log --all --after=$date --decorate=short'
+#alias git-integrator-log-after-next='date=$(git log --date=short next -1 | grep "Date" | sed -E "s/Date:\s+//") ; git log --all --after=$date --decorate=short'
+#date_pattern="'s/Date:\s+//'"
+#alias git-integrator-check-commits-from-last-integration='git submodule foreach --recursive bash -c "integration_branch=$(git branch -l -a \"origin/*master\"); if [[ -z \"$integration_branch\" ]]; then integration_branch=$(git branch -l -a \"origin/*next\"); fi; last_integration_date=$(git log $integration_branch --date=short -n 1 | grep \"Date:\" | sed -E $date_pattern); git --no-pager log --all --after=$last_integration_date"'
+
+
