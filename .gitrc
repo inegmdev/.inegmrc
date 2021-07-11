@@ -28,12 +28,6 @@ alias gchk='git checkout'
 alias gb='git branch'
 alias gdiff="git diff"
 
-# Git Diff Aliases
-# ----------------
-alias gitdiff-all='echo "# Staged:"; git diff --name-only --cached; echo "# Unstaged:"; git diff --name-only; echo "# Untracked:"; git ls-files -o; echo;echo ; git submodule foreach --recursive bash -c "echo \"# Staged:\"; git diff --name-only --cached; echo \"# Unstaged:\"; git diff --name-only; echo \"# Untracked:\"; git ls-files -o; echo;echo"'
-alias gitdiff-unstaged='echo "# Unstaged:"; git diff --name-only; echo;echo ; git submodule foreach --recursive bash -c "echo \"# Unstaged:\"; git diff --name-only; echo;echo"'
-alias gitdiff-staged='echo "# Staged:"; git diff --name-only --cached; echo;echo ; git submodule foreach --recursive bash -c "echo \"# Staged:\"; git diff --name-only --cached; echo;echo"'
-alias gitdiff-untracked='echo "# Untracked:"; git ls-files -o; echo;echo ; git submodule foreach --recursive bash -c "echo \"# Untracked:\"; git ls-files -o; echo;echo"'
 
 # Git External Diff Commands
 # --------------------------
@@ -46,6 +40,7 @@ alias gitdiff-rhapsody='yes | git difftool -t rhapsody'
 alias git-next="git fetch --all --tags --prune;  git checkout --detach; git fetch origin next:next -f && git checkout next || echo NONEXT;  echo;echo; git-for bash -c 'git fetch --all --tags --prune;  git checkout --detach; git fetch origin next:next -f && git checkout next || echo NONEXT;  echo;echo;'"
 alias git-topic="make --directory=~/_scripts/topic-checkout topic-checkout"
 alias git-fetch="git fetch --all --prune --tags; git-for git fetch --all --prune --tags"
+alias git-status="git submodule foreach --recursive git log --pretty='format:%C(auto)%d' -n 1"
 
 # Git Integration
 # ---------------
@@ -118,13 +113,53 @@ function git_sync()
 export -f git_sync 
 alias git-next2master="git_sync next master"
 
-function git_checkout {
-  local all_args=$@
-	local RED='\033[0;31m'
-	local GREEN='\033[0;32m'
-	local NC='\033[0m'
-	
-	git submodule foreach --recursive bash -c "git checkout ${all_args} && echo -e '${GREEN}Successfull checkout.${NC}' || echo -e '${RED}Reference does not exist${NC}'; echo"
+function git_checkout_submodule ()
+{
+  # Parameters
+  local repo_path=$1
+  local passed_args=${@:2}
+
+  # Color constants
+  local GREY='\033[1;30m'
+  local YELLOW='\033[1;33m'
+  local RED='\033[0;31m'
+  local GREEN='\033[0;32m'
+  local NC='\033[0m'
+
+  # Git checkout command, capture the ouptut to parse it
+  git checkout ${passed_args} > /tmp/output.cmd.tmp 2>&1
+  ret_string=$( cat /tmp/output.cmd.tmp ) 
+
+  # Parse the output of the previous command
+  if [[ $ret_string == *"already exists"* ]]; then 
+    printf "${YELLOW}[Already exists, pull? ]${NC}"
+  elif [[ $ret_string == *"is not a commit and a branch"* ]]; then
+    printf "${GREY}[Does not exist]        ${NC}"
+  else
+    printf "${GREEN}[Checked out]           ${NC}"
+  fi
+
+  # Print the repo path
+  printf "  -   ${repo_path}\n"
+}
+
+export -f git_checkout_submodule
+
+function git_checkout 
+{
+  check_dry_run
+
+  # Parameters
+  local git_command_per_submodule="git_checkout_submodule \$displaypath $@"
+
+  echo ${git_command_per_submodule}
+
+  # Git command
+  git_command="git status"
+  
+  git submodule --quiet foreach --recursive "$( echo ${git_command_per_submodule} )"
+
+  # git submodule foreach --recursive bash -c "git checkout ${git_command_per_submodule} && echo -e '${GREEN}Successfull checkout.${NC}' || echo -e '${RED}Reference does not exist${NC}'; echo"
 }
 export -f git_checkout
 alias git-checkout="git_checkout"
@@ -142,94 +177,155 @@ alias next="git checkout --detach && git fetch origin next:next -f && git checko
 # @param branch    [in] Branch to be cloned
 # 
 function sim-clone () {
-	local repo_path=$(realpath $1)
-	local branch=$2
+  local repo_path=$(realpath $1)
+  local branch=$2
 
-	# Echo some information
-	echo "Clone (${branch}) in Repo (${repo_path})"
+  # Echo some information
+  echo "Clone (${branch}) in Repo (${repo_path})"
 
-	# Remove all things except `.git` folder
-	ls | xargs rm -rfv
+  # Remove all things except `.git` folder
+  ls | xargs rm -rfv
 
-	# Update `.git` dir
-	git fetch --all --tags --prune
+  # Update `.git` dir
+  git fetch --all --tags --prune
 
-	# Run garbage collection
-	git gc --aggressive
+  # Run garbage collection
+  git gc --aggressive
 
-	# Git reset the repo 
-	git reset --hard HEAD
+  # Git reset the repo 
+  git reset --hard HEAD
 
-	# Git fetch the latest branch
-	git fetch origin ${branch}:${branch} -f
+  # Git fetch the latest branch
+  git fetch origin ${branch}:${branch} -f
 
-	# Git checkout 
-	git checkout next
-	
-	# Git clean
-	git reset --hard HEAD && git submodule foreach --recursive bash -c "git reset --hard HEAD"
+  # Git checkout 
+  git checkout next
+  
+  # Git clean
+  git reset --hard HEAD && git submodule foreach --recursive bash -c "git reset --hard HEAD"
 
-	# Git reset
-	git clean -xfd && git submodule foreach --recursive bash -c "git clean -xfd"
+  # Git reset
+  git clean -xfd && git submodule foreach --recursive bash -c "git clean -xfd"
 
-	# Git update submodules
-	git submodule sync --recursive && git submodule update --init --recursive
+  # Git update submodules
+  git submodule sync --recursive && git submodule update --init --recursive
 }
 export -f sim-clone
 
-function u_color () {
-	local color=$1
-	case ${color} in
-		"red")
-			echo "\u001b[48;5;1m"
-		;;
-		"green")
-			echo "\u001b[48;5;2m"
-		;;
+function bg_color () {
+  local color=$1
+  case ${color} in
+    "red")
+      printf "\u001b[48;5;1m"
+    ;;
+    "green")
+      printf "\u001b[48;5;2m"
+    ;;
 
-		"yellow")
-			echo "\u001b[48;5;3m"
-		;;
-		
-		"blue")
-			echo "\u001b[48;5;4m"
-		;;
-		
-		"magenta")
-			echo "\u001b[48;5;5m"
-		;;
-		
-		"cyan")
-			echo "\u001b[48;5;6m"
-		;;
-		
-		"no")
-		echo "\u001b[0m"
-		;;
-		
-		*)
-		echo ""
-		;;
-	esac
+    "yellow")
+      printf "\u001b[48;5;3m"
+    ;;
+    
+    "blue")
+      printf "\u001b[48;5;4m"
+    ;;
+    
+    "magenta")
+      printf "\u001b[48;5;5m"
+    ;;
+    
+    "cyan")
+      printf "\u001b[48;5;6m"
+    ;;
+    
+    "no")
+    printf "\u001b[0m"
+    ;;
+    
+    *)
+    printf ""
+    ;;
+  esac
+}
+
+function u_color () {
+  local color=$1
+  case ${color} in
+    "red")
+      printf "\033[0;31m"
+    ;;
+    "green")
+      printf "\033[0;32m"
+    ;;
+
+    "yellow")
+      printf "\033[0;33m"
+    ;;
+    
+    "blue")
+      printf "\033[0;34m"
+    ;;
+    
+    "magenta")
+      printf "\033[0;35m"
+    ;;
+    
+    "cyan")
+      printf "\033[0;36m"
+    ;;
+    
+    "no")
+    printf "\033[0m"
+    ;;
+    
+    *)
+    printf ""
+    ;;
+  esac
 }
 
 function step_head () {
-	# Colors
-	local cyan=$( u_color "cyan" )
-	local no_color=$( u_color "no" )
-	
-	# Message format
-	local msg=$1
-	local msg_formatted=$(  printf "++++ %-40s ++++\n" ${msg} )
-	
-	# Print the message
-	printf "${cyan}${msg_formatted}${no_color}" 
+  # Colors
+  local cyan=$( u_color "cyan" )
+  local no_color=$( u_color "no" )
+  
+  # Message format
+  local msg=$@
+  local msg_formatted=$(  printf "++++ %-40s ++++\n" ${msg} )
+  
+  # Print the message
+  printf "${cyan}${msg_formatted}${no_color}" 
 }
 
 function step_foorter () {
-	local msg=$1
-	printf "%-s40" ${msg}
+  local msg=$1
+  printf "%-s40" ${msg}
 }
+
+
+# Git Diff Aliases
+# ----------------
+alias gitdiff-all='echo "# Staged:"; git diff --name-only --cached; echo "# Unstaged:"; git diff --name-only; echo "# Untracked:"; git ls-files -o; echo;echo ; git submodule foreach --recursive bash -c "echo \"# Staged:\"; git diff --name-only --cached; echo \"# Unstaged:\"; git diff --name-only; echo \"# Untracked:\"; git ls-files -o; echo;echo"'
+
+function gitdiff_unstaged()
+{
+  timestamp=$( date +%s%N )
+  tmpfile="/tmp/gitdiff-${timestamp}.tmp"
+
+  step_head "Unstaged"
+  echo
+  u_color "yellow"
+  git diff --name-only --color=always > ${tmpfile}
+  cat ${tmpfile}
+  rm -f ${tmpfile}
+  u_color "no"
+  echo
+  echo;echo
+}
+alias gitdiff-unstaged='gitdiff_unstaged ; git submodule foreach --recursive bash -lc "gitdiff_unstaged"'
+alias gitdiff-staged='echo "# Staged:"; git diff --name-only --cached; echo;echo ; git submodule foreach --recursive bash -c "echo \"# Staged:\"; git diff --name-only --cached; echo;echo"'
+alias gitdiff-untracked='echo "# Untracked:"; git ls-files -o; echo;echo ; git submodule foreach --recursive bash -c "echo \"# Untracked:\"; git ls-files -o; echo;echo"'
+
 
 # Depricated 
 # ----------
