@@ -5,7 +5,7 @@ alias inegm-update='curl -o ~/.gitrc -L https://raw.githubusercontent.com/i-negm
 # For Git repo users
 alias inegm-fetch='cd ~ && git checkout --detach && git fetch origin master:master -f && git checkout; source ~/.bashrc'
 # Installing 
-alias inegm-install='echo "source ~/.gitrc >> ~/.bashrc"; source ~/.bashrc'
+alias inegm-install='echo "source ~/.gitrc" >> ~/.bashrc; source ~/.bashrc'
 
 # Everyday Git Commands
 # ---------------------
