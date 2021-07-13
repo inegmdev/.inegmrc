@@ -1,3 +1,12 @@
+# Update command for this script
+# ------------------------------
+# For one file fetch
+alias inegm-update='curl -o ~/.gitrc -L https://raw.githubusercontent.com/i-negm/home_config/master/.gitrc; source ~/.bashrc'
+# For Git repo users
+alias inegm-fetch='cd ~ && git checkout --detach && git fetch origin master:master -f && git checkout; source ~/.bashrc'
+# Installing 
+alias inegm-install='echo "source ~/.gitrc >> ~/.bashrc"; source ~/.bashrc'
+
 # Everyday Git Commands
 # ---------------------
 # git-l will list the log of all branches in a gui format
