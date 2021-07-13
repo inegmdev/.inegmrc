@@ -19,6 +19,12 @@ alias git-fetch-force-next-master='git-for bash -c "git checkout --detach; git b
 
 # Fast Git Aliases
 # ----------------
+function git_fetch() {
+  local branch=$1
+  local rest_of_params=${@:2}
+  git fetch origin ${branch}:${branch} ${rest_of_params}
+}
+alias gf='git_fetch'
 alias gls='git log --oneline --graph --decorate'
 alias glsa='git log --oneline --graph --decorate --all'
 alias gst='git status'
@@ -135,24 +141,33 @@ function git_checkout_submodule ()
     printf "${YELLOW}[Already exists, pull? ]${NC}"
   elif [[ $ret_string == *"is not a commit and a branch"* ]]; then
     printf "${GREY}[Does not exist]        ${NC}"
+  elif [[ $ret_string == *"did not match any file"* ]]; then
+    printf "${GREY}[Does not exist]        ${NC}"
   else
     printf "${GREEN}[Checked out]           ${NC}"
   fi
 
   # Print the repo path
   printf "  -   ${repo_path}\n"
+
+  if [[ -n $DEBUG && $DEBUG -eq 1 ]]; then
+    echo "## DEBUG ##"
+    echo git checkout ${passed_args}
+    cat /tmp/output.cmd.tmp
+    echo
+  fi
 }
 
 export -f git_checkout_submodule
 
 function git_checkout 
 {
-  check_dry_run
-
   # Parameters
   local git_command_per_submodule="git_checkout_submodule \$displaypath $@"
 
-  echo ${git_command_per_submodule}
+  if [[ -n $DEBUG && $DEBUG -eq 1 ]]; then
+  echo "$ git submodule foreach --recursive '${git_command_per_submodule}'"
+  fi
 
   # Git command
   git_command="git status"
