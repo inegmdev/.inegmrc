@@ -57,6 +57,10 @@ alias git-topic="make --directory=~/_scripts/topic-checkout topic-checkout"
 alias git-fetch="git fetch --all --prune --tags; git-for git fetch --all --prune --tags"
 alias git-status="git submodule foreach --recursive git log --pretty='format:%C(auto)%d' -n 1"
 
+# Git pruning and fixing the repo
+# -------------------------------
+alias git-prune="git remote prune origin && git repack && git prune-packed && git reflog expire --expire=1.month.ago && git gc --aggressive"
+
 # Git Integration
 # ---------------
 function print_separator() 

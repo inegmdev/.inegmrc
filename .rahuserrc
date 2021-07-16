@@ -1,0 +1,32 @@
+g_logs_dir="~/RAH/logs"
+
+function rah_get_log()
+{
+  # Parameters
+  local logs_dir=${g_logs_dir}
+  local board=$1
+  local local_output_path=$2
+
+  # Sanity checks
+  if [[ -z ${board} || -z ${local_output_path} ]]; then
+    echo "ERROR input parameter."
+    echo "  Usage: rah-get-log <board_name> <file_output_location>"
+    return 1
+  fi
+
+  # Get the latest log info
+  local logs_dir_path="${logs_dir}/${board}"
+  local latest_log_info=$( ssh $RAH_USER@$RAH_MACHINE "ls -last ${logs_dir_path} | head -2 | tail -1" )
+  # Parse the log file name
+  local latest_log_name=$( echo ${latest_log_info} | awk -F ' ' '{print $10}' )
+  # Get the abspath for the log file
+  local latest_log_full_path=$( ssh $RAH_USER@$RAH_MACHINE "realpath ~/RAH/logs/${board}/${latest_log_name}" )
+
+  # Fetch the file in this path
+  scp $RAH_USER@$RAH_MACHINE:${latest_log_full_path} ${local_output_path}
+}
+
+export -f rah_get_log
+
+alias rah-get-log='rah_get_log'
+
