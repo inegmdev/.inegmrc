@@ -147,6 +147,7 @@ function git_checkout_submodule ()
 
   # Git checkout command, capture the ouptut to parse it
   git checkout ${passed_args} > /tmp/output.cmd.tmp 2>&1
+  ret_value=$?
   ret_string=$( cat /tmp/output.cmd.tmp ) 
 
   # Parse the output of the previous command
@@ -156,8 +157,15 @@ function git_checkout_submodule ()
     printf "${GREY}[Does not exist]        ${NC}"
   elif [[ $ret_string == *"did not match any file"* ]]; then
     printf "${GREY}[Does not exist]        ${NC}"
-  else
+  elif [[ $ret_string == *"aborting"* ]]; then
+    printf "${RED}[Failed to checkout]    ${NC}"
+    return 1
+  elif [[ $ret_value == 0 ]]; then
     printf "${GREEN}[Checked out]           ${NC}"
+  else
+    printf "${RED}[Failure has happened]  ${NC}"
+    echo $ret_string
+    return 1
   fi
 
   # Print the repo path
