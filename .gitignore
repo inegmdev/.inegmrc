@@ -1,0 +1,9 @@
+# Ignore everything
+*
+
+# Only track theses files
+!.gitignore
+!.gitattributes
+!.gitrc
+!.rahuserrc
+

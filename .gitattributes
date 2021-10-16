@@ -1,0 +1,2 @@
+# Force every file eol to be \n only
+* text eol=lf
