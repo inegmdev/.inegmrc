@@ -6,4 +6,5 @@
 !.gitattributes
 !.gitrc
 !.rahuserrc
-
+!.ps1rc
+!.git-prompt.sh
