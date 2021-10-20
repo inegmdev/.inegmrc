@@ -2,7 +2,7 @@
 source ~/.git-prompt.sh
 
 # PS1 Colorful
-PS1='\[\e[0;35m\]\u \[\e[0;37m\]@ \[\e[0;32m\]\h \[\e[0;33m\]\W\[\e[0;36m\]$(__git_ps1 " (%s)")\[\e[0m\]\n\$ '
+PS1='\[\e[0;35m\]\u \[\e[0;37m\]@ \[\e[0;32m\]\h \[\e[0;33m\]\w\[\e[0;36m\]$(__git_ps1 " (%s)")\[\e[0m\]\n\$ '
 # PS1 Colorless
 # PS1='[\u@\h \W$(__git_ps1 " (%s)")]\$ '
 
