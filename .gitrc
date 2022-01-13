@@ -17,6 +17,9 @@ alias git-fetch='git fetch --all --prune --tags; git-for bash -c "git fetch --al
 # git-fetch-force-next-master: This will sync the next 
 alias git-fetch-force-next-master='git-for bash -c "git checkout --detach; git branch -D master && git fetch origin master:master -f; git branch -D next && git fetch origin next:next -f || echo NO NEXT; echo; echo"'
 
+# Git Sweep (reset + clean + update)
+alias git-sweep='git-reset && git-clean && git-update'
+
 # Fast Git Aliases
 # ----------------
 function git_fetch() {
