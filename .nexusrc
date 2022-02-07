@@ -1,0 +1,58 @@
+unset -f nexus_download_help
+unset -f sanity_nexus_download_params
+unset -f nexus_download
+
+
+function nexus_download_help () {
+  echo "Usage:"
+  echo "  nexus-download <url> [file_path]"
+}
+export -f nexus_download_help
+
+function sanity_nexus_download_params () {
+  local p_url=$1
+  local p_path=$2
+
+  if [[ -z $p_url ]] ; then
+    echo "error"
+  fi
+}
+export -f sanity_nexus_download_params
+
+function nexus_check_netrc_file()
+{
+  local netrc=~/.nexusrc_netrc
+  if [[ ! -e ${netrc} ]] ; then
+    read -p "Enter Nexus site name: " nexus_name
+    read -p "Enter username: " nexus_user
+    read -p "Enter password: " nexus_pass
+    echo "machine ${nexus_name}" > ${netrc}
+    echo "login ${nexus_user}" >> ${netrc}
+    echo "password ${nexus_pass}" >> ${netrc}
+  fi
+}
+export -f nexus_check_netrc_file
+
+function nexus_download () {
+  local p_url=$1
+  local p_path=$2
+
+  local ret=$( sanity_nexus_download_params $p_url $p_path )
+  case "$ret" in
+    *error*)
+    nexus_download_help
+    return
+    ;;
+  esac
+
+  local default_p_path=$( basename ${p_url} )
+
+  if [[ -z $p_path ]] ; then
+    p_path=${default_p_path}
+  fi
+  nexus_check_netrc_file
+  curl -v -k --show-error --netrc-file ~/.nexusrc_netrc "${p_url}" > ${p_path}
+}
+export -f nexus_download
+
+alias nexus-download='nexus_download'
