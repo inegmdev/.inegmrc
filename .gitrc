@@ -143,7 +143,9 @@ function git_checkout_submodule ()
   local NC='\033[0m'
 
   # Git checkout command, capture the ouptut to parse it
-  git fetch --all --prune --tags --quiet
+  # @note this is disabled to avoid fetching data for 
+  #       each repo, this can be done by user using `git-fetch`
+  # git fetch --all --prune --tags --quiet
   git checkout ${passed_args} > /tmp/output.cmd.tmp 2>&1
   ret_value=$?
   ret_string=$( cat /tmp/output.cmd.tmp ) 
