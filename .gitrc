@@ -146,9 +146,11 @@ function git_checkout_submodule ()
   # @note this is disabled to avoid fetching data for 
   #       each repo, this can be done by user using `git-fetch`
   # git fetch --all --prune --tags --quiet
-  git checkout ${passed_args} > /tmp/output.cmd.tmp 2>&1
+  git checkout --detach > /dev/null 2>&1
+  git fetch origin ${passed_args}:${passed_args} > /dev/null 2>&1
+  git checkout ${passed_args} > /tmp/output_${USER}.cmd.tmp 2>&1
   ret_value=$?
-  ret_string=$( cat /tmp/output.cmd.tmp ) 
+  ret_string=$( cat /tmp/output_${USER}.cmd.tmp ) 
 
   # Parse the output of the previous command
   if [[ $ret_string == *"already exists"* ]]; then 
@@ -174,7 +176,7 @@ function git_checkout_submodule ()
   if [[ -n $DEBUG && $DEBUG -eq 1 ]]; then
     echo "## DEBUG ##"
     echo git checkout ${passed_args}
-    cat /tmp/output.cmd.tmp
+    cat ~/tmp/output_${USER}.cmd.tmp
     echo
   fi
 }
@@ -200,10 +202,110 @@ function git_checkout
 export -f git_checkout
 alias git-checkout="git_checkout"
 
-
 alias git-tag="~/_scripts/submodule-tag/main.sh"
 alias git-branch="~/_scripts/submodule-branch/main.sh"
 alias next="git checkout --detach && git fetch origin next:next -f && git checkout next && git-clean && git-reset && git-update "
+
+
+function git_checkout_pr_submodule ()
+{
+  # Parameters
+  local repo_path=$1
+  local passed_args=${@:2}
+
+  # Color constants
+  local GREY='\033[1;30m'
+  local YELLOW='\033[1;33m'
+  local RED='\033[0;31m'
+  local GREEN='\033[0;32m'
+  local NC='\033[0m'
+
+  # Git checkout command, capture the ouptut to parse it
+  # @note this is disabled to avoid fetching data for 
+  #       each repo, this can be done by user using `git-fetch`
+  # git fetch --all --prune --tags --quiet
+  git checkout --detach > /dev/null 2>&1
+  git fetch origin ${passed_args}:${passed_args} > /dev/null 2>&1
+  git checkout ${passed_args} > /tmp/output_${USER}.cmd.tmp 2>&1
+  
+  ret_value=$?
+  ret_string=$( cat /tmp/output_${USER}.cmd.tmp )
+  
+  
+  # Parse the output of the previous command
+  if [[ $ret_string == *"already exists"* ]]; then 
+    printf "${YELLOW}[Already exists, pull? ]${NC}"
+    # Print the repo path
+    printf "                -   ${repo_path}\n"
+  elif [[ $ret_string == *"is not a commit and a branch"* ]]; then
+    printf "${GREY}[Does not exist]        ${NC}"
+    # Print the repo path
+    printf "                -   ${repo_path}\n"
+  elif [[ $ret_string == *"did not match any file"* ]]; then
+    printf "${GREY}[Does not exist]        ${NC}"
+    # Print the repo path
+    printf "                -   ${repo_path}\n"
+  elif [[ $ret_string == *"aborting"* ]]; then
+    printf "${RED}[Failed to checkout]    ${NC}"
+    # Print the repo path
+    printf "                -   ${repo_path}\n"
+    return 1
+  elif [[ $ret_value == 0 ]]; then
+    printf "${GREEN}[Checked out]           ${NC}"
+    printf "                -   ${repo_path}\n"
+    git merge origin/Master-Integration > /tmp/PRoutput_${USER}.cmd.tmp 2>&1
+    ret_PRvalue=$?
+    ret_PRstring=$( cat /tmp/PRoutput_${USER}.cmd.tmp ) 
+    if [[ $ret_PRvalue == 0 ]]; then
+      printf "${GREEN}[Merge Master-Integraton to] ${NC}"
+      # Print the repo path
+      printf "           -   ${repo_path}  "
+      printf "${RED}[Check Merge Conflict if exist ]\n${NC}"
+    elif [[ $ret_PRvalue != 0 ]]; then
+      printf "${RED}[Fail to Merge Master-Integraton to] ${NC}"
+      # Print the repo path
+      printf "   -   ${repo_path}\n"
+    fi
+  else
+    printf "${RED}[Failure has happened]  ${NC}"
+    # Print the repo path
+    printf "            -   ${repo_path}\n"
+    echo $ret_string
+    return 1
+  fi
+  
+
+
+  if [[ -n $DEBUG && $DEBUG -eq 1 ]]; then
+    echo "## DEBUG ##"
+    echo git checkout ${passed_args}
+    cat ~/tmp/output_${USER}.cmd.tmp
+    echo
+  fi
+}
+
+export -f git_checkout_pr_submodule
+
+function git_checkout_pr 
+{
+  # Parameters
+  local git_command_per_submodule="git_checkout_pr_submodule \$displaypath $@"
+
+  if [[ -n $DEBUG && $DEBUG -eq 1 ]]; then
+  echo "$ git submodule foreach --recursive '${git_command_per_submodule}'"
+  fi
+
+  # Git command
+  git_command="git status"
+
+  git submodule --quiet foreach --recursive "$( echo ${git_command_per_submodule} )"
+  
+  # git submodule foreach --recursive bash -c "git checkout ${git_command_per_submodule} && echo -e '${GREEN}Successfull checkout.${NC}' || echo -e '${RED}Reference does not exist${NC}'; echo"
+}
+export -f git_checkout_pr
+alias git-checkout-pr="git_checkout_pr"
+
+
 
 
 #
