@@ -126,7 +126,6 @@ function git_sync()
   print_separator
   echo "[git-next2master]: ✔ Success "
 }
-export -f git_sync 
 alias git-next2master="git_sync next master"
 
 function git_checkout_submodule ()
@@ -181,12 +180,12 @@ function git_checkout_submodule ()
   fi
 }
 
-export -f git_checkout_submodule
 
 function git_checkout 
 {
   # Parameters
-  local git_command_per_submodule="git_checkout_submodule \$displaypath $@"
+  local git_command_per_submodule="bash -c \" source ~/.gitrc && git_checkout_submodule \$displaypath $@\""
+
 
   if [[ -n $DEBUG && $DEBUG -eq 1 ]]; then
   echo "$ git submodule foreach --recursive '${git_command_per_submodule}'"
@@ -199,7 +198,6 @@ function git_checkout
 
   # git submodule foreach --recursive bash -c "git checkout ${git_command_per_submodule} && echo -e '${GREEN}Successfull checkout.${NC}' || echo -e '${RED}Reference does not exist${NC}'; echo"
 }
-export -f git_checkout
 alias git-checkout="git_checkout"
 
 alias git-tag="~/_scripts/submodule-tag/main.sh"
@@ -284,12 +282,11 @@ function git_checkout_pr_submodule ()
   fi
 }
 
-export -f git_checkout_pr_submodule
 
 function git_checkout_pr 
 {
   # Parameters
-  local git_command_per_submodule="git_checkout_pr_submodule \$displaypath $@"
+  local git_command_per_submodule="bash -c \" source ~/.gitrc && git_checkout_pr_submodule \$displaypath $@\""
 
   if [[ -n $DEBUG && $DEBUG -eq 1 ]]; then
   echo "$ git submodule foreach --recursive '${git_command_per_submodule}'"
@@ -302,7 +299,6 @@ function git_checkout_pr
   
   # git submodule foreach --recursive bash -c "git checkout ${git_command_per_submodule} && echo -e '${GREEN}Successfull checkout.${NC}' || echo -e '${RED}Reference does not exist${NC}'; echo"
 }
-export -f git_checkout_pr
 alias git-checkout-pr="git_checkout_pr"
 
 
@@ -348,7 +344,6 @@ function sim-clone () {
   # Git update submodules
   git submodule sync --recursive && git submodule update --init --recursive
 }
-export -f sim-clone
 
 function bg_color () {
   local color=$1
